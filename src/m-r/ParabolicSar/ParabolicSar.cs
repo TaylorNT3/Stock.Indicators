@@ -81,10 +81,10 @@ public static partial class Indicator
                 {
                     r.IsReversal = true;
                     r.Sar = extremePoint;
-
-                    isRising = false;
-                    accelerationFactor = initialFactor;
-                    extremePoint = q.Low;
+                    r.IsRising = isRising = false; // persist value for _Next version
+                    
+                    r.AccelerationFactor = accelerationFactor = initialFactor;
+                    r.ExtremePoint = extremePoint = q.Low; // persist value for _Next version
                 }
 
                 // continue rising
@@ -92,12 +92,15 @@ public static partial class Indicator
                 {
                     r.IsReversal = false;
                     r.Sar = sar;
+                    r.IsRising = isRising;
+                    r.AccelerationFactor = accelerationFactor; // set to old incase not overwritten below
+                    r.ExtremePoint = extremePoint; // set to old incase not overwritten below
 
                     // new high extreme point
                     if (q.High > extremePoint)
                     {
-                        extremePoint = q.High;
-                        accelerationFactor =
+                        r.ExtremePoint = extremePoint = q.High; // persist value for _Next version
+                        r.AccelerationFactor = accelerationFactor =
                             Math.Min(
                                 accelerationFactor += accelerationStep,
                                 maxAccelerationFactor);
@@ -126,10 +129,10 @@ public static partial class Indicator
                 {
                     r.IsReversal = true;
                     r.Sar = extremePoint;
+                    r.IsRising = isRising = true; // persist value for _Next version
 
-                    isRising = true;
-                    accelerationFactor = initialFactor;
-                    extremePoint = q.High;
+                    r.AccelerationFactor = accelerationFactor = initialFactor;
+                    r.ExtremePoint = extremePoint = q.High; // persist value for _Next version
                 }
 
                 // continue falling
@@ -137,12 +140,15 @@ public static partial class Indicator
                 {
                     r.IsReversal = false;
                     r.Sar = sar;
+                    r.IsRising = isRising;
+                    r.AccelerationFactor = accelerationFactor; // set to old incase not overwritten below
+                    r.ExtremePoint = extremePoint; // set to old incase not overwritten below
 
                     // new low extreme point
                     if (q.Low < extremePoint)
                     {
-                        extremePoint = q.Low;
-                        accelerationFactor =
+                        r.ExtremePoint =  extremePoint = q.Low; // persist value for _Next version
+                        r.AccelerationFactor = accelerationFactor =
                             Math.Min(
                                 accelerationFactor += accelerationStep,
                                 maxAccelerationFactor);
@@ -172,6 +178,117 @@ public static partial class Indicator
         }
 
         return results;
+    }
+
+    public static ParabolicSarResult GetParabolicSar_Next(
+        (decimal High, decimal Low) curr,
+        (decimal High, decimal Low) prev,
+        (decimal High, decimal Low) prev2,
+        ParabolicSarResult prevResult,
+        decimal accelerationStep = 0.02m,
+        decimal maxAccelerationFactor = 0.2m )
+    {
+        var isRising = (bool)prevResult.IsRising;
+        var priorSar = (decimal)prevResult.Sar;
+        var extremePoint = (decimal)prevResult.ExtremePoint;
+        var accelerationFactor = (decimal)prevResult.AccelerationFactor;
+
+        var initialFactor = accelerationStep;
+
+        ParabolicSarResult r = new();
+
+        // was rising
+        if (isRising)
+        {
+            decimal sar =
+                priorSar + (accelerationFactor * (extremePoint - priorSar));
+
+            // SAR cannot be higher than last two lows
+            decimal minLastTwo =
+                Math.Min(
+                    prev.Low,
+                    prev2.Low);
+
+            sar = Math.Min(sar, minLastTwo);
+
+            // turn down
+            if (curr.Low < sar)
+            {
+                r.IsReversal = true;
+                r.Sar = extremePoint;
+                r.IsRising = isRising = false; // persist value for _Next version
+
+                r.AccelerationFactor = accelerationFactor = initialFactor;
+                r.ExtremePoint = extremePoint = curr.Low; // persist value for _Next version
+            }
+
+            // continue rising
+            else
+            {
+                r.IsReversal = false;
+                r.Sar = sar;
+                r.IsRising = isRising;
+                r.AccelerationFactor = accelerationFactor; // set to old incase not overwritten below
+                r.ExtremePoint = extremePoint; // set to old incase not overwritten below
+
+                // new high extreme point
+                if (curr.High > extremePoint)
+                {
+                    r.ExtremePoint = extremePoint = curr.High; // persist value for _Next version
+                    r.AccelerationFactor = accelerationFactor =
+                        Math.Min(
+                            accelerationFactor += accelerationStep,
+                            maxAccelerationFactor);
+                }
+            }
+        }
+
+        // was falling
+        else
+        {
+            decimal sar
+                = priorSar - (accelerationFactor * (priorSar - extremePoint));
+
+            // SAR cannot be lower than last two highs
+            decimal maxLastTwo = Math.Max(
+                prev.High,
+                prev2.High);
+
+            sar = Math.Max(sar, maxLastTwo);
+
+            // turn up
+            if (curr.High > sar)
+            {
+                r.IsReversal = true;
+                r.Sar = extremePoint;
+                r.IsRising = isRising = true; // persist value for _Next version
+
+                r.AccelerationFactor = accelerationFactor = initialFactor;
+                r.ExtremePoint = extremePoint = curr.High; // persist value for _Next version
+            }
+
+            // continue falling
+            else
+            {
+                r.IsReversal = false;
+                r.Sar = sar;
+                r.IsRising = isRising;
+                r.AccelerationFactor = accelerationFactor; // set to old incase not overwritten below
+                r.ExtremePoint = extremePoint; // set to old incase not overwritten below
+
+                // new low extreme point
+                if (curr.Low < extremePoint)
+                {
+                    r.ExtremePoint = extremePoint = curr.Low; // persist value for _Next version
+                    r.AccelerationFactor = accelerationFactor =
+                        Math.Min(
+                            accelerationFactor += accelerationStep,
+                            maxAccelerationFactor);
+                }
+            }
+        }
+
+        return r;
     }
 
     // remove recommended periods

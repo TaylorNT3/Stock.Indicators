@@ -94,6 +94,27 @@ public static partial class Indicator
         return results;
     }
 
+    public static EmaResult CalcEma_Next(double currValue, int indexValue, int lookbackPeriods, double? lastEma)
+    {
+        //BasicD h = curr;
+        int index = indexValue + 1;
+
+        var k = 2d / (lookbackPeriods + 1); // if doing whole series, pass in to only calc once
+
+        decimal? ema = null;
+
+        if (index > lookbackPeriods)
+        {
+            ema = (decimal?)(lastEma + (k * (currValue - lastEma)));
+        }
+        else if (index == lookbackPeriods)
+        {
+            ema = (decimal?)lastEma;
+        }
+
+        return new EmaResult() { Ema = ema };
+    }
+
     // parameter validation
     private static void ValidateEma(
         List<BasicD> quotes,

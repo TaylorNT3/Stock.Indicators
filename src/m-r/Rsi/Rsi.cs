@@ -92,10 +92,14 @@ public static partial class Indicator
                 {
                     double rs = avgGain / avgLoss;
                     r.Rsi = 100 - (100 / (1 + rs));
+                    r.AvgGain = avgGain;
+                    r.AvgLoss = avgLoss;
                 }
                 else
                 {
                     r.Rsi = 100;
+                    r.AvgGain = avgGain;
+                    r.AvgLoss = avgLoss;
                 }
             }
 
@@ -111,14 +115,45 @@ public static partial class Indicator
                     sumLoss += loss[p];
                 }
 
-                avgGain = sumGain / lookbackPeriods;
-                avgLoss = sumLoss / lookbackPeriods;
+                r.AvgGain = avgGain = sumGain / lookbackPeriods;
+                r.AvgLoss = avgLoss = sumLoss / lookbackPeriods;
 
                 r.Rsi = (avgLoss > 0) ? 100 - (100 / (1 + (avgGain / avgLoss))) : 100;
             }
         }
 
         return results;
+    }
+
+    public static RsiResult CalcRsi_Next(double currValue, RsiResult prevResult, int lookbackPeriods = 14)
+    {
+        var prevValue = (double)prevResult.Rsi;
+        var avgGain = (double)prevResult.AvgGain;
+        var avgLoss = (double)prevResult.AvgLoss;
+
+        RsiResult r = new();
+
+        var gain = (currValue > prevValue) ? currValue - prevValue : 0;
+        var loss = (currValue < prevValue) ? prevValue - currValue : 0;
+
+        // calculate RSI
+        avgGain = ((avgGain * (lookbackPeriods - 1)) + gain) / lookbackPeriods;
+        avgLoss = ((avgLoss * (lookbackPeriods - 1)) + loss) / lookbackPeriods;
+
+        if (avgLoss > 0)
+        {
+            double rs = avgGain / avgLoss;
+            r.Rsi = 100 - (100 / (1 + rs));
+        }
+        else
+        {
+            r.Rsi = 100;
+        }
+
+        r.AvgGain = avgGain;
+        r.AvgLoss = avgLoss;
+
+        return r;
     }
 
     // parameter validation

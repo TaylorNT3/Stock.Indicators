@@ -4,4 +4,6 @@ namespace Skender.Stock.Indicators;
 public class RsiResult : ResultBase
 {
     public double? Rsi { get; set; }
+    public double? AvgGain { get; set; }
+    public double? AvgLoss { get; set; }
 }
